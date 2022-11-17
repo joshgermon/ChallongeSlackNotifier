@@ -1,4 +1,5 @@
-use crate::challonge::{self, get_participant_from_id};
+use crate::{challonge::{self, get_participant_from_id}, Config};
+use clap::Parser;
 use reqwest;
 use serde_json::json;
 
@@ -52,7 +53,7 @@ fn create_msg(mtc: &challonge::Match) -> String {
                             "emoji": true
                         },
                         "value": "click_me_123",
-                        "url": "https://challonge.com/[TOURNAMENT_NAME_HERE]",
+                        "url": "https://challonge.com/nonamecomp",
                         "action_id": "button-action"
                     }
                 }
@@ -63,10 +64,11 @@ fn create_msg(mtc: &challonge::Match) -> String {
 }
 
 pub fn send_match_msg(latest_match: challonge::Match) -> String {
+    let webhook = Config::parse().webhook;
     let message = create_msg(&latest_match);
     let client = reqwest::blocking::Client::new();
     let res = client
-        .post("[SLACK_WEBHOOK_ENDPOINT_HERE]")
+        .post(webhook)
         .header("Content-Type", "application/json")
         .body(message)
         .send()

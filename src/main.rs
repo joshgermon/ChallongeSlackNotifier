@@ -5,6 +5,27 @@ use serde_json::{Result, Value};
 use std::thread;
 mod slack;
 mod challonge;
+use clap::Parser;
+
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+pub struct Config {
+   #[arg(short, long)]
+   webhook: String,
+
+   #[arg(short, long)]
+   secret: String,
+
+   #[arg(short, long)]
+   user: String,
+
+   #[arg(short, long, default_value_t = 5000)]
+   poll: u64,
+
+   #[arg(short, long, default_value_t = false)] 
+   verbose: bool
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -13,6 +34,7 @@ async fn main() -> Result<()> {
 
 async fn poll_loop() -> Result<()> {
     let mut prev_match_count = 0;
+    let verbose = Config::parse().verbose;
     loop {
         let matches = challonge::get_matches().await;
         let total_match_count = matches.len();
@@ -24,13 +46,21 @@ async fn poll_loop() -> Result<()> {
         if completed_match_count <= prev_match_count || prev_match_count == 0 {
             println!("No new matches.");
             println!("Matches Completed: {}/{}", completed_match_count, total_match_count);
+            if verbose {
+                println!("Last Match Recorded:");
+                println!("{:?}", completed_matches.last());
+            }
         } else {
-            handle_update(completed_matches);
+            handle_update(completed_matches.clone());
             println!("New match found. Sending message to Slack...");
             println!("Matches Completed: {}/{}", completed_match_count, total_match_count);
+            if verbose {
+                println!("Last Match Recorded:");
+                println!("{:?}", completed_matches.last());
+            }
         }
         prev_match_count = completed_match_count;
-        let sleep_time = time::Duration::from_millis(5000);
+        let sleep_time = time::Duration::from_millis(Config::parse().poll);
         thread::sleep(sleep_time);
     }
 }

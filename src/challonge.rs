@@ -1,5 +1,8 @@
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::Config;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Match {
@@ -84,13 +87,11 @@ pub struct ParticipantInfo {
 }
 
 pub async fn get_matches() -> Vec<Match> {
+    let config = Config::parse();
     let client = reqwest::Client::new();
     let resp = client
-        .get("https://api.challonge.com/v1/tournaments/[TOURNAMENT_ID_HERE]/matches.json")
-        .basic_auth(
-            "[USERNAME_HERE]",
-            Some("[API_KEY_HERE]"),
-        )
+        .get("https://api.challonge.com/v1/tournaments/12088582/matches.json")
+        .basic_auth(config.user, Some(config.secret))
         .send()
         .await
         .unwrap()
@@ -102,18 +103,18 @@ pub async fn get_matches() -> Vec<Match> {
 
 pub fn get_participant_from_id(id: i64) -> ParticipantInfo {
     let participants = get_particpants();
-    let matching_participant = participants.into_iter().find(|p| p.participant.group_player_ids[0] == id);
+    let matching_participant = participants
+        .into_iter()
+        .find(|p| p.participant.group_player_ids[0] == id);
     matching_participant.unwrap().participant
 }
 
 pub fn get_particpants() -> Vec<Participant> {
+    let config = Config::parse();
     let client = reqwest::blocking::Client::new();
     let participants = client
-        .get("https://api.challonge.com/v1/tournaments/[TOURNAMENT_ID_HERE]/participants.json")
-        .basic_auth(
-            "[USERNAME_HERE]",
-            Some("[API_KEY_HERE]"),
-        )
+        .get("https://api.challonge.com/v1/tournaments/12088582/participants.json")
+        .basic_auth(config.user, Some(config.secret))
         .send()
         .unwrap()
         .json::<Vec<Participant>>()
